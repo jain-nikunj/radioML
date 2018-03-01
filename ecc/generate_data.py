@@ -1,6 +1,7 @@
 # Written by Nikunj Jain
 import numpy as np
 import commpy.channelcoding.convcode as cc
+from itertools import permutations
 
 def generate_random_binary_sequence(n, p=0.5):
   """
@@ -76,6 +77,36 @@ def gen_gmatrix(L, rate=0.5):
 
   return np.array([dict_l_generator[L]])
 
+def entropy(p):
+  """
+  Return the Bernoulli entropy associated with p.
+  """
+  return -(p * np.log2(p) + (1-p) * np.log2(1-p))
+
+def generate_encode_typical_set(L, k, rate=1/2, p=0.81):
+  """
+  Generates and encodes the typical set of sequences defined on the space by
+  the particular value of p. The size of the typical set is approximately
+  2^{nH(p)} which is equivalent to all the sequences when p is 0.5, but is
+  considerably smaller when p is more biased.
+
+  Returns an array of these sequences, and the corresponding encoded versions.
+  """
+  ent = entropy(p)
+  generator_matrix = gen_gmatrix(L, rate)
+  memory = np.array([L-1])
+
+  base_seq = [0 for i in range(int(k * (1-p)))] + [1 for i in range(int(k * p))]
+  typ_set = list(permutations(base_seq))
+
+  encoded_seqs = [None for _ in range(len(typ_set))]
+
+  for i, message_seq in enumerate(typ_set):
+    encoded_seq = convolutional_encode(message_seq, generator_matrix, memory)
+    encoded_seqs[i] = encoded_seq
+
+  return typ_set, encoded_seqs
+
 def generate_encode_random_sequences(L, k, n, rate=1/2, p=0.5):
   """
   Generates n random binary sequences of k bits each. Convolutionally encodes
@@ -100,6 +131,24 @@ def generate_encode_random_sequences(L, k, n, rate=1/2, p=0.5):
 
   return message_seqs, encoded_seqs
 
+def viterbi_decode_sequences(encoded_seqs, L, rate=1/2):
+  """
+  Given a list of convolutionally encoded sequences, uses the Viterbi
+  algorithm on each element to decode it using a hard-decision boundary.
+  The Trellis is generated as per the specified L and k.
+
+  Returns a list of decoded elements.
+  """
+  decoded_seqs = [None for _ in range(len(encoded_seqs))]
+  generator_matrix = gen_gmatrix(L, rate)
+  memory = np.array([L-1])
+  trellis = cc.Trellis(memory, generator_matrix)
+
+  for i, encoded_seq in enumerate(encoded_seqs):
+    decoded_seq = cc.viterbi_decode(encoded_seq.astype(float), trellis)
+    decoded_seqs[i] = decoded_seq
+
+  return decoded_seqs
 
 
 
