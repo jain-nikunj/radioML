@@ -1,5 +1,6 @@
 # Written by Nikunj Jain
 import numpy as np
+from tqdm import tqdm
 import commpy.channelcoding.convcode as cc
 import pickle
 from commpy.channels import bsc
@@ -189,9 +190,9 @@ def create_dataset(k=100, n=100, probs=[0.1, 0.5, 0.81],
 
   dataset = {}
 
-  for seq_p in probs:
-    for bsc_err in err:
-      for L in Ls:
+  for seq_p in tqdm(probs):
+    for bsc_err in tqdm(err):
+      for L in tqdm(Ls):
         message_seqs, encoded_seqs = generate_encode_random_sequences(L, k, n)
         noisy_seqs = simulate_bsc(encoded_seqs, bsc_err)
         viterbi_decoded_seqs = viterbi_decode_sequences(noisy_seqs, L)
