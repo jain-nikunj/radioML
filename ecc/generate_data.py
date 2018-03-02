@@ -1,6 +1,8 @@
 # Written by Nikunj Jain
 import numpy as np
 import commpy.channelcoding.convcode as cc
+import pickle
+from commpy.channels import bsc
 from itertools import permutations
 
 def generate_random_binary_sequence(n, p=0.5):
@@ -149,6 +151,58 @@ def viterbi_decode_sequences(encoded_seqs, L, rate=1/2):
     decoded_seqs[i] = decoded_seq
 
   return decoded_seqs
+
+def hamming_distance(seq1, seq2):
+  """
+  Given two binary length sequences, seq1 and seq2 (presumed to be the same
+  length) returns the Hamming bitwise distance between them.
+  """
+  dist = sum([1 if seq1[i] != seq2[i] else 0 for i in range(len(seq1))])
+  return dist
+
+def simulate_bsc(sequences, p=0.1):
+  """
+  Simulates passing the sequences through a binary symmetric channel with the
+  given corruption probability. Accepts an iterable of 1D ndarrays, and returns
+  a list of corrupted sequences.
+  """
+  corrupted_sequences = [None for _ in range(len(sequences))]
+
+  for i, seq in enumerate(sequences):
+    corrupted_seq = bsc(seq, p)
+    corrupted_sequences[i] = corrupted_seq
+
+  return corrupted_sequences
+
+def create_dataset(k=100, n=100, probs=[0.1, 0.5, 0.81],
+                   err=[0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.8],
+                   Ls = [3, 5], filename="viterbi_dump.pk"):
+  """
+  Creates a dataset consisting of n binary sequences of length k each. Each
+  sequence is drawn at random from a Bernoulli distribution. These are
+  convolutionally encoded, then subject to varying levels of noise from a
+  binary symmetric channel. Finally, the corresponding Viterbi sequences are
+  also recorded.
+
+  Nothing is returned, and the data is dumped into a file called filename.
+  """
+
+  dataset = {}
+
+  for seq_p in probs:
+    for bsc_err in err:
+      for L in Ls:
+        message_seqs, encoded_seqs = generate_encode_random_sequences(L, k, n)
+        noisy_seqs = simulate_bsc(encoded_seqs, bsc_err)
+        viterbi_decoded_seqs = viterbi_decode_sequences(noisy_seqs, L)
+
+        key = (seq_p, bsc_err, L)
+        vals = (message_seqs, noisy_seqs, viterbi_decoded_seqs)
+        dataset[key] = vals
+
+  with open(filename, 'wb') as output:
+    pickle.dump(dataset, output)
+
 
 
 
