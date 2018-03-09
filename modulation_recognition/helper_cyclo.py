@@ -36,4 +36,8 @@ def normalize(data):
 
   return data
 
+def to_onehot(yy):
+    yy1 = np.zeros([len(yy), max(yy)+1])
+    yy1[np.arange(len(yy)),yy] = 1
+    return yy1
 
