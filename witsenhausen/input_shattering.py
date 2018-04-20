@@ -11,9 +11,13 @@ NUM_BINS = 6
 XMIN = -1
 XMAX = 1
 BIN_WIDTH = (XMAX - XMIN) / (NUM_BINS - 2)
-NUM_EPOCHS = 10000
+NUM_EPOCHS = 100000
 LR = 0.001
 BATCHSIZE = 1000
+
+def cross_entropy(x, y, axis=-1):
+  safe_y = tf.where(tf.equal(x, 0), tf.ones_like(y), y)
+  return -tf.reduce_mean(x * tf.log(safe_y), axis)
 
 def generate_samples(x):
   """
@@ -55,17 +59,17 @@ def create_network(num_bins):
   y = tf.add(tf.matmul(x, a), b)
 
   input_mtx = tf.Variable(tf.ones((1, (num_bins - 2)), tf.float32))
-  input_mtx = tf.constant(1, shape=[1, num_bins - 2], dtype=tf.float32)
-  input_bias = tf.reshape(
+#  input_mtx = tf.constant(1, shape=[1, num_bins - 2], dtype=tf.float32)
+  input_bias = tf.Variable(
     tf.constant(
       [-(i+1) + (num_bins + 1)/2 for i in range(num_bins - 2)],
-      dtype=tf.float32), (1, -1))
+      dtype=tf.float32))#, (1, -1))
 
   bins = tf.add(tf.matmul(y, input_mtx), input_bias)
   activations = (sinc(bins))
 
   true_y = tf.placeholder(tf.float32, [None, num_bins - 2])
-  cost = tf.losses.softmax_cross_entropy(true_y, activations)
+  cost = tf.losses.softmax_cross_entropy(true_y + 1e-7, activations + 1e-7)
 
   train_op = tf.train.AdamOptimizer(learning_rate=LR).minimize(cost)
 
